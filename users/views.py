@@ -2,37 +2,43 @@ from django.shortcuts import render, redirect
 from users.forms import RegisterForm, LoginForm
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-def register_view(request):
-    if request.method == 'GET':
+from django.views.generic import ListView, CreateView
+
+class RegisterCBV(ListView, CreateView):
+    model = User
+    template_name = 'users/register.html'
+    form_class = RegisterForm
+    def get(self, request, **kwargs):
         context = {
             'form': RegisterForm
         }
-        return render(request, 'users/register.html', context=context)
+        return render(request, self.template_name, context=context)
 
-    if request.method == 'POST':
-        form = RegisterForm(data=request.POST)
-
+    def post(self, request, **kwargs):
+        form = self.form_class(data=request.POST)
         if form.is_valid():
             if form.cleaned_data.get('password1') == form.cleaned_data.get('password2'):
-                User.objects.create_user(
+                self.model.objects.create_user(
                     username=form.cleaned_data.get('username'),
                     password=form.cleaned_data.get('password1')
                 )
                 return redirect('/users/login/')
             else:
                 form.add_error('password1', 'invalid password')
-        return render(request, 'users/register.html', context={'form': form})
-
-def login_view(request):
-    if request.method == 'GET':
+        return render(request, self.template_name, context={'form': form})
+class LoginCBV(ListView, CreateView):
+    model = User
+    template_name = 'users/login.html'
+    form_class = LoginForm
+    def get(self, request, **kwargs):
         context = {
             'form': LoginForm
         }
 
-        return render(request, 'users/login.html', context=context)
+        return render(request, self.template_name, context=context)
 
-    if request.method == 'POST':
-        form = LoginForm(data=request.POST)
+    def post(self, request, **kwargs):
+        form = self.form_class(data=request.POST)
         if form.is_valid():
             """authenticate user"""
             user = authenticate(request,
@@ -45,8 +51,10 @@ def login_view(request):
             else:
                 form.add_error('username', 'Authentication error, try again ')
 
-        return render(request, 'users/login.html', context={'form': form})
+        return render(request, self.template_name, context={'form': form})
 
-def logout_view(request):
-    logout(request)
-    return redirect('/products/')
+
+class LogoutCBV(ListView):
+    def get(self, request, **kwargs):
+        logout(request)
+        return redirect('/products/')
